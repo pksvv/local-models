@@ -17,6 +17,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import vault
 import jobs
+import library
 from queue_store import QueueStore
 
 APP = Path(__file__).resolve().parent
@@ -121,6 +122,26 @@ class Controller:
                     data.update(saved)
                     data['cached'] = True
         return data
+
+    def library(self):
+        cfg=vault.read(vault.CONFIG,{})
+        plans=[]
+        try:
+            vault.guard(cfg)
+            root=Path(cfg['volume'])/'ModelVault'
+            plan=vault.read(root/'plan.json',{})
+            if plan:plans.append(plan)
+            for path in (APP/'specific-plans').glob('*.json'):
+                try:plans.append(vault.read(path,{}))
+                except (ValueError,OSError):continue
+            if self.store:
+                with self.store.connect() as db:
+                    for row in db.execute('SELECT snapshot FROM plans'):
+                        saved=json.loads(row[0])
+                        if saved.get('volume')==cfg['volume']:plans.append(saved)
+            return library.inventory(cfg,plans)
+        except (OSError,ValueError,RuntimeError,KeyError) as exc:
+            return dict(available=False,models=[],error=str(exc))
 
     def state(self):
         with self.lock:
@@ -280,6 +301,8 @@ class Handler(BaseHTTPRequestHandler):
                         except BlockingIOError:data['manager_active']=True
                 except OSError:pass
             return self.respond(200, data)
+        if self.path == '/api/library':
+            return self.respond(200, self.server.controller.library())
         if self.path == '/api/jobs':
             return self.respond(200, {'jobs':jobs.history(APP)})
         if self.path == '/api/log':
@@ -296,6 +319,7 @@ class Handler(BaseHTTPRequestHandler):
                   '/app.js': ('app.js', 'text/javascript; charset=utf-8'),
                   '/specific.js': ('specific.js', 'text/javascript; charset=utf-8'),
                   '/activity.js': ('activity.js', 'text/javascript; charset=utf-8'),
+                  '/library.js': ('library.js', 'text/javascript; charset=utf-8'),
                   '/language.js': ('language.js', 'text/javascript; charset=utf-8'),
                   '/style.css': ('style.css', 'text/css; charset=utf-8')}
         if self.path in assets:

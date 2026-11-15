@@ -83,6 +83,7 @@ function renderStatus() {
   const catalog = $('catalog'); catalog.replaceChildren();
   for (const row of state.catalog) catalog.append(element('p', row.repo + ' · ' + row.category + ' · ' + (row.enabled ? t('enabled') : t('disabled'))));
   renderSegments(); renderQueue(); buttons();
+  window.dispatchEvent(new Event('vaultstatus'));
 }
 async function refresh() {
   try {

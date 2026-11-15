@@ -269,6 +269,12 @@ Only after reviewing the queue:
 
 The dashboard itself does not automatically start a queue after a restart.
 
+## Downloaded-model library
+
+The dashboard now has a separate **Downloaded models** section above the specific-model form. Completion cards show completed, partial and not-started models in the main queue, plus the total complete selections in your library. Search the library by repository or category. Each entry shows a completion badge, size, selected-file count, pinned revision, saved directory and the latest recorded file-check time.
+
+The library checks known plans from the main queue, saved single-model plans and previous SQLite snapshots for the configured drive. Duplicate selections are collapsed. Every selected file must exist at its expected size; a `.part` file alone does not qualify. **Previously checksum-verified** means successful results were recorded previously; inventory polling checks sizes and does not re-hash model weights. Otherwise the entry says Verification pending. Unknown folders without a saved plan are not automatically indexed. When the drive is unavailable the library does not claim live completion.
+
 ## Job activity and queue health
 
 New dashboard jobs receive a unique ID (for example `job-YYYYMMDD-HHMMSS-xxxxxxxx`), a readable name, description, process ID, start/end timestamps, elapsed time, exit code, and lifecycle state. Choose a job in Worker activity and filter INFO, WARN, or ERROR entries. Entries include timestamps, event types, repository/file context where available, and durable checkpoint progress. Timestamps are stored in UTC and displayed in the browser's local time.
@@ -328,7 +334,7 @@ The archive is not a benchmark or a promise that every listed model runs on this
 .venv/bin/python -m unittest discover -v
 ```
 
-The latest recorded run passed **33 tests on macOS / Python 3.13**. Tests use temporary files and local HTTP servers, not bulk model transfers. Coverage includes hard process termination and resume, durable-tail handling, complete-partial recovery, HTTP range behavior, checksum/corruption handling, reserve and drive guards, file selection, queue-review checks, request controls, classification, and SQLite persistence/offline recovery.
+The latest recorded run passed **37 tests on macOS / Python 3.13**. Tests use temporary files and local HTTP servers, not bulk model transfers. Coverage includes hard process termination and resume, durable-tail handling, complete-partial recovery, HTTP range behavior, checksum/corruption handling, reserve and drive guards, file selection, queue-review checks, request controls, classification, and SQLite persistence/offline recovery.
 
 English/Hinglish switching, remembered language across navigation, queue filters, the disabled empty-archive Verify control, and the light theme were checked in the live browser. JavaScript syntax checks passed. See [DASHBOARD_TEST_RESULTS.txt](DASHBOARD_TEST_RESULTS.txt).
 

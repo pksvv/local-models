@@ -51,3 +51,9 @@ lifecycle completion. Live queue health and shared-manager detection verified
 on 8767. Existing active worker on 8766 was preserved, with legacy output
 explicitly identified. New structured jobs were tested in temporary storage;
 no additional model download was started for testing.
+
+Downloaded library update:
+37 tests passed. Added inventory coverage for complete/deduplicated selections,
+missing/partial/wrong-sized files, historical verification labels and unsafe or
+offline paths. Live library found the 8 completed pinned models; all had prior
+successful file-check records. No transfers were started or stopped by this update.
