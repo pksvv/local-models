@@ -1,0 +1,36 @@
+Model Vault 2.0 validation — 2026-11-15, macOS / Python 3.13
+
+.venv/bin/python -m unittest discover -v
+20 tests passed (12 downloader tests, 8 dashboard tests).
+
+Downloader: hard process kill and range resume, checkpoint tail truncation,
+ignored/malformed ranges, corruption repair, reserve protection, missing drive,
+GGUF shards/duplicate selection, native selection, path traversal.
+Dashboard: read-only snapshot and token omission, unavailable drive,
+checkpoint fingerprints/durable offsets, traversal and symlink rejection,
+stale queue refusal, CLI recheck after locking, completed-partial recovery,
+CLI invocation/review signature and graceful stop,
+HTTP assets/status, explicit review, CSRF, origin and host checks.
+
+Live smoke check: dashboard launched on loopback port 8766; API and browser
+show mounted external drive, 8 pinned models, 42,667,942,126 bytes, no files present,
+20 GiB reserve, idle worker, Start/Verify disabled until explicit review.
+No bulk downloads started; no existing user files deleted.
+
+Physical power loss, USB unplug/replug, full model transfers and LaunchAgent
+reboot recovery were not exercised. Existing test_vault fork-based crash test
+emits Python 3.13's multithreaded-fork deprecation warning but passes.
+
+Segmentation / persistence update:
+24 tests passed with `python -m unittest discover -v`.
+Added category/publisher classification, empty-download verification rejection,
+SQLite restart/offline queue recovery, retained plan snapshots and worker events.
+Browser verified: Uncensored drill-down shows Dolphin only (1 of 8), Clear filters
+restores 8 of 8, and Verify remains disabled even with queue review checked.
+UI reset to unreviewed/idle afterward; no downloads started.
+
+Bilingual / theme update:
+English default and Hinglish Help verified in the live browser. Hinglish choice
+persists when navigating to Dashboard; switching back to English and reloading
+preserves English. Light turmeric + warm-red blend visually checked.
+JavaScript syntax checks passed; 24 regression tests passed.

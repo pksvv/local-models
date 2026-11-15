@@ -1,0 +1,33 @@
+# Local environments and generated artifacts
+.venv/
+__pycache__/
+*.py[cod]
+.DS_Store
+*.log
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-*
+/dashboard-*.png
+# Credentials and machine-specific state
+.env
+.env.*
+!.env.example
+.aws/
+.codex/
+.agents/
+config.json
+plan.json
+status.json
+completed.json
+.manager.lock
+.volume-id
+metadata/
+models/
+*.part
+*.checkpoint.json
+*.safetensors
+*.gguf
+*.bin
+*.pt
+*.pth

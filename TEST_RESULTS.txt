@@ -1,0 +1,6 @@
+Validation on 15 November 2026
+11 unit/integration tests passed on Linux.
+Includes hard worker termination, ranged resume, uncommitted-tail truncation, ignored/invalid Range responses, corruption repair, space guard, drive guard, shard selection and path checks.
+One live Hugging Face README download verified against upstream Git blob checksum.
+setup.sh passed bash syntax check.
+Not tested: actual macOS launchd, USB remount behavior, physical power cuts, large weight transfer.
