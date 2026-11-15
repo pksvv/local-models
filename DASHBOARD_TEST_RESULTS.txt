@@ -34,3 +34,12 @@ English default and Hinglish Help verified in the live browser. Hinglish choice
 persists when navigating to Dashboard; switching back to English and reloading
 preserves English. Light turmeric + warm-red blend visually checked.
 JavaScript syntax checks passed; 24 regression tests passed.
+
+Single-model download update:
+28 tests passed, including metadata-only preview, source validation, missing
+weights rejection, separate persisted plan, preview expiration and custom CLI
+plan isolation from the main queue completion marker.
+Live Hugging Face metadata preview returned pinned revision, selected GGUF,
+license and exact files; no new transfer was started for validation.
+Updated UI is on port 8767 because the user has an active worker on 8766;
+the existing worker was not stopped or restarted.

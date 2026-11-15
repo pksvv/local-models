@@ -205,8 +205,8 @@ def download(url, dest, item, check=lambda:None, reserve=20*GIB, headers=None):
     return 'downloaded + verified'
 
 
-def run(cfg, verify_only=False):
-    plan=read('plan.json')
+def run(cfg, verify_only=False, plan_path='plan.json'):
+    plan=read(plan_path)
     if not plan:raise RuntimeError('Run plan first.')
     state=read('status.json',{})
     errors=0
@@ -265,6 +265,7 @@ def install_agent():
 def main():
     p=argparse.ArgumentParser();p.add_argument('command',choices=['setup','login','plan','start','watch','verify','status','install-agent','remove-agent','discover'])
     p.add_argument('--volume');p.add_argument('--reserve',type=int,default=20);p.add_argument('--search',default='abliterated');p.add_argument('--limit',type=int,default=100)
+    p.add_argument('--plan-file',default='plan.json',help='Explicit pinned plan; custom plans do not change the main queue')
     p.add_argument('--expected-plan',help='Refuse a changed queue after dashboard review')
     a=p.parse_args()
     if a.command=='setup':
@@ -290,7 +291,7 @@ def main():
         try:fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
         except BlockingIOError:raise RuntimeError('Another manager is active.')
         if a.expected_plan:
-            signature=hashlib.sha256(Path('plan.json').read_bytes()).hexdigest()
+            signature=hashlib.sha256(Path(a.plan_file).read_bytes()).hexdigest()
             if signature!=a.expected_plan:raise RuntimeError('Plan changed after review; review the queue again.')
         if a.command=='plan':make_plan(cfg)
         elif a.command=='discover':
@@ -299,14 +300,15 @@ def main():
         elif a.command=='status':
             state=read('status.json',{});print(json.dumps(state,indent=2))
         else:
-            signature=hashlib.sha256(Path('plan.json').read_bytes()).hexdigest()
+            signature=hashlib.sha256(Path(a.plan_file).read_bytes()).hexdigest()
             boot=subprocess.check_output(['/usr/sbin/sysctl','-n','kern.boottime'],text=True).strip() if sys.platform=='darwin' else 'test'
             done=read('completed.json',{})
             if a.command=='watch' and done.get('plan')==signature and done.get('boot')==boot:
                 return
-            errors=run(cfg,a.command=='verify')
+            errors=run(cfg,a.command=='verify',a.plan_file)
             if errors:raise RuntimeError(str(errors)+' files need attention; retry on next launch.')
-            guard(cfg);atomic('completed.json',dict(plan=signature,boot=boot,time=time.time()))
+            guard(cfg)
+            if a.plan_file=='plan.json':atomic('completed.json',dict(plan=signature,boot=boot,time=time.time()))
             print('Queue complete. All files verified; no repeated transfers this boot.')
 
 if __name__=='__main__':

@@ -197,6 +197,21 @@ Generate a fresh plan:
 
 Planning fetches metadata, selects files, and pins exact commits; it does not download model weights. Errors preserve the previous plan. Review the resulting `/Volumes/ModelArchive/ModelVault/plan.json` and the dashboard before starting.
 
+## Download a specific model from the dashboard
+
+Use **Download a specific model** above the queue:
+
+1. Paste `owner/repo` or its `https://huggingface.co/owner/repo` page URL.
+2. Choose GGUF and a quantization such as Q4_K_M, or native safetensors. Choose a category label yourself; the app does not infer behavior from a name.
+3. Select **Preview files & size**. Only metadata is fetched. Inspect the pinned commit, file list, total size, free space, and model license/access requirements.
+4. Tick the specific-model review checkbox, then select **Download only this model**.
+
+This creates a separate local plan in ignored `specific-plans/` and runs the existing downloader against it. It does not replace `plan.json`, alter catalog enabled flags, or add work to the login agent's main queue. Worker activity shows the specific job; Stop safely stops it. The same exclusive manager lock prevents overlap with CLI/login downloads. Files and recovery checkpoints still live on the configured external drive.
+
+Preview expires after 30 minutes or a dashboard restart. Previewing the same pinned revision again lets the downloader reuse its existing files/checkpoints. Saved single-model plans survive restart and can also be resumed through `vault.py start --plan-file /absolute/path/to/specific-plans/<id>.json`. The main queue's completion marker is unchanged by these jobs. Its model totals and file list continue to describe the main queue; specific-job output appears in Worker activity.
+
+Gated repositories need permission and a CLI-configured HF token. Native selection supports safetensors; adapter-only or custom `.bin` packaging needs manual catalog configuration. File-level/tree URLs are not accepted; paste the repository page. API errors leave existing plans and checkpoints untouched.
+
 ## Everyday workflow
 
 1. Connect the external drive and check its free space and reserve.
@@ -302,7 +317,7 @@ The archive is not a benchmark or a promise that every listed model runs on this
 .venv/bin/python -m unittest discover -v
 ```
 
-The latest recorded run passed **24 tests on macOS / Python 3.13**. Tests use temporary files and local HTTP servers, not bulk model transfers. Coverage includes hard process termination and resume, durable-tail handling, complete-partial recovery, HTTP range behavior, checksum/corruption handling, reserve and drive guards, file selection, queue-review checks, request controls, classification, and SQLite persistence/offline recovery.
+The latest recorded run passed **28 tests on macOS / Python 3.13**. Tests use temporary files and local HTTP servers, not bulk model transfers. Coverage includes hard process termination and resume, durable-tail handling, complete-partial recovery, HTTP range behavior, checksum/corruption handling, reserve and drive guards, file selection, queue-review checks, request controls, classification, and SQLite persistence/offline recovery.
 
 English/Hinglish switching, remembered language across navigation, queue filters, the disabled empty-archive Verify control, and the light theme were checked in the live browser. JavaScript syntax checks passed. See [DASHBOARD_TEST_RESULTS.txt](DASHBOARD_TEST_RESULTS.txt).
 

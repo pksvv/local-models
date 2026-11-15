@@ -163,6 +163,62 @@ class DashboardTests(unittest.TestCase):
         with store.connect() as db:
             self.assertEqual(db.execute('SELECT outcome FROM events').fetchone()[0], 'exited: 130')
 
+    def remote_model(self):
+        return dict(id='owner/model', sha='a'*40, cardData={'license': 'mit'}, gated=False,
+                    siblings=[dict(rfilename='model-Q4_K_M.gguf', size=8, lfs={'sha256': 'b'*64})])
+
+    def test_specific_preview_is_metadata_only(self):
+        control = dashboard.Controller()
+        before = self.plan.read_bytes()
+        with patch.object(vault, 'api', return_value=self.remote_model()) as api, patch.object(dashboard.subprocess, 'Popen') as spawn:
+            value = control.preview_model(dict(repo='https://huggingface.co/owner/model', format='gguf', quant='Q4_K_M'))
+        self.assertEqual(value['plan']['total_bytes'], 8)
+        api.assert_called_once_with('models/owner/model', {'blobs': 'true'})
+        spawn.assert_not_called()
+        self.assertEqual(self.plan.read_bytes(), before)
+
+    def test_specific_rejects_bad_sources_and_missing_weights(self):
+        control = dashboard.Controller()
+        with patch.object(vault, 'api') as api:
+            for repo in ['https://evil.example/owner/model', '../escape', 'owner/model/resolve/main/a', 'https://huggingface.co/owner/model?x=1']:
+                with self.assertRaises(ValueError): control.preview_model({'repo': repo})
+            api.assert_not_called()
+        with patch.object(vault, 'api', return_value={**self.remote_model(), 'siblings': []}):
+            with self.assertRaisesRegex(ValueError, 'No selected weights'):
+                control.preview_model({'repo': 'owner/model'})
+
+    def test_specific_start_separate_plan_and_expiry(self):
+        control = dashboard.Controller(); control.log = self.root / 'worker.log'
+        before = self.plan.read_bytes()
+        with patch.object(vault, 'api', return_value=self.remote_model()):
+            preview = control.preview_model({'repo': 'owner/model'})
+        with patch.object(dashboard, 'APP', self.root), patch.object(dashboard.subprocess, 'Popen') as spawn:
+            control.start_model(preview['preview'])
+            args = spawn.call_args.args[0]
+            self.assertIn('--plan-file', args)
+            saved = Path(args[args.index('--plan-file')+1])
+            self.assertEqual(json.loads(saved.read_text()), preview['plan'])
+            self.assertEqual(self.plan.read_bytes(), before)
+        control.process = None
+        control.previews[preview['preview']]['time'] = 0
+        with self.assertRaisesRegex(ValueError, 'expired'):
+            control.start_model(preview['preview'])
+
+    def test_cli_custom_plan_preserves_main_completion(self):
+        custom = self.root / 'custom.json'
+        custom.write_bytes(self.plan.read_bytes())
+        completed = self.vault / 'completed.json'
+        completed.write_text('{"preserve":true}')
+        cwd = Path.cwd()
+        try:
+            with patch.object(dashboard.sys, 'argv', ['vault.py', 'start', '--plan-file', str(custom)]), patch.object(vault, 'run', return_value=0) as run, patch.object(vault.subprocess, 'check_output', return_value='test-boot'):
+                vault.main()
+                run.assert_called_once()
+                self.assertEqual(run.call_args.args[1:], (False, str(custom)))
+            self.assertEqual(json.loads(completed.read_text()), {'preserve': True})
+        finally:
+            dashboard.os.chdir(cwd)
+
 
 if __name__ == '__main__':
     unittest.main()

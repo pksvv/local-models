@@ -4,6 +4,9 @@ import argparse
 import hashlib
 import json
 import os
+import re
+import time
+from urllib.parse import urlparse
 from pathlib import Path
 import secrets
 import signal
@@ -57,7 +60,7 @@ def snapshot():
             entry['tags'] = tags_for(model)
             entry['publisher'] = model['repo'].split('/')[0]
             catalog_row = next((r for r in result['catalog'] if r['repo'] == model['repo']), {})
-            entry['format'] = catalog_row.get('format', 'unknown').upper()
+            entry['format'] = model.get('format', catalog_row.get('format', 'unknown')).upper()
             entry['files'] = []
             for item in model['files']:
                 dest = base / vault.safe(item['name'])
@@ -99,6 +102,7 @@ def snapshot():
 
 class Controller:
     def __init__(self, store=None):
+        self.previews = {}
         self.store = store
         self.event_id = None
         self.lock = threading.Lock()
@@ -146,6 +150,72 @@ class Controller:
             if self.store:
                 self.event_id = self.store.event(action, signature, self.process.pid, 'started')
 
+    def preview_model(self, data):
+        value = str(data.get('repo', '')).strip()
+        if value.startswith('https://'):
+            parsed = urlparse(value)
+            if parsed.netloc != 'huggingface.co' or parsed.query or parsed.fragment:
+                raise ValueError('Use a huggingface.co model repository URL or owner/repo')
+            value = parsed.path.strip('/')
+        if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9][A-Za-z0-9_.-]*', value):
+            raise ValueError('Enter owner/repo or its Hugging Face repository page URL')
+        fmt = data.get('format', 'gguf')
+        if fmt not in ('gguf', 'native'):
+            raise ValueError('Choose GGUF or native safetensors')
+        quant = str(data.get('quant', 'Q4_K_M')).strip()
+        if fmt == 'gguf' and not re.fullmatch(r'[A-Za-z0-9_.-]{1,40}', quant):
+            raise ValueError('Enter a valid quantization, such as Q4_K_M')
+        category = str(data.get('category', 'General'))
+        if category not in ('General', 'Abliterated', 'Uncensored', 'Coding', 'Reasoning', 'Vision', 'Embedding', 'Reranking', 'Speech'):
+            raise ValueError('Choose a category')
+        cfg = vault.read(vault.CONFIG, {})
+        vault.guard(cfg)
+        remote = vault.api('models/' + value, {'blobs': 'true'})
+        if remote.get('id', '').lower() != value.lower() or not re.fullmatch(r'[a-fA-F0-9]{40,64}', remote.get('sha', '')):
+            raise ValueError('Invalid repository identity or revision')
+        files = vault.select(dict(format=fmt, quant=quant), remote['siblings'])
+        for file in files:
+            if not isinstance(file['size'], int) or file['size'] < 0 or not (file.get('sha256') or file.get('git_sha1')):
+                raise ValueError('Selected files must have sizes and upstream checksums')
+        item = dict(repo=remote['id'], revision=remote['sha'], category=category,
+                    format=fmt, license=(remote.get('cardData') or {}).get('license'),
+                    gated=remote.get('gated'), files=files)
+        plan = dict(created=time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+                    items=[item], total_bytes=sum(f['size'] for f in files))
+        vault.guard(cfg)
+        free = vault.shutil.disk_usage(Path(cfg['volume']) / 'ModelVault').free
+        with self.lock:
+            now = time.time()
+            self.previews = {k: v for k, v in self.previews.items() if now-v['time'] < 1800}
+            if len(self.previews) >= 20:
+                raise ValueError('Too many previews. Wait or restart the dashboard.')
+            key = secrets.token_urlsafe(24)
+            self.previews[key] = dict(plan=plan, time=now, volume=cfg['volume'], marker=cfg['marker'])
+        return dict(preview=key, plan=plan, free_bytes=free, reserve_gib=cfg['reserve_gib'])
+
+    def start_model(self, key):
+        with self.lock:
+            if self.process is not None and self.process.poll() is None:
+                raise ValueError('A dashboard worker is already active')
+            preview = self.previews.get(key)
+            if not preview or time.time()-preview['time'] > 1800:
+                raise ValueError('Preview expired. Preview the model again.')
+            cfg = vault.read(vault.CONFIG, {})
+            vault.guard(cfg)
+            if (cfg['volume'], cfg['marker']) != (preview['volume'], preview['marker']):
+                raise ValueError('Drive changed. Preview the model again.')
+            # Separate persistent plan: main queue and background watch remain unchanged.
+            path = APP / 'specific-plans' / (key + '.json')
+            vault.atomic(path, preview['plan'])
+            signature = hashlib.sha256(path.read_bytes()).hexdigest()
+            with self.log.open('ab') as log:
+                self.process = subprocess.Popen([sys.executable, '-u', str(APP / 'vault.py'),
+                    'start', '--plan-file', str(path), '--expected-plan', signature],
+                    cwd=APP, stdout=log, stderr=log, start_new_session=True)
+            self.action = 'specific: ' + preview['plan']['items'][0]['repo']
+            if self.store:
+                self.event_id = self.store.event(self.action, signature, self.process.pid, 'started')
+
     def stop(self):
         with self.lock:
             if self.process is not None and self.process.poll() is None:
@@ -189,6 +259,7 @@ class Handler(BaseHTTPRequestHandler):
         assets = {'/': ('index.html', 'text/html; charset=utf-8'),
                   '/help': ('help.html', 'text/html; charset=utf-8'),
                   '/app.js': ('app.js', 'text/javascript; charset=utf-8'),
+                  '/specific.js': ('specific.js', 'text/javascript; charset=utf-8'),
                   '/language.js': ('language.js', 'text/javascript; charset=utf-8'),
                   '/style.css': ('style.css', 'text/css; charset=utf-8')}
         if self.path in assets:
@@ -207,7 +278,13 @@ class Handler(BaseHTTPRequestHandler):
             if not 0 < size <= 4096:
                 raise ValueError('Invalid body length')
             data = json.loads(self.rfile.read(size))
-            if self.path == '/api/stop':
+            if self.path == '/api/model/preview':
+                return self.respond(200, self.server.controller.preview_model(data))
+            if self.path == '/api/model/start':
+                if data.get('reviewed') is not True:
+                    raise ValueError('Review the model files before downloading')
+                self.server.controller.start_model(data.get('preview'))
+            elif self.path == '/api/stop':
                 self.server.controller.stop()
             elif self.path in ('/api/start', '/api/verify'):
                 if data.get('reviewed') is not True:
@@ -216,7 +293,7 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 return self.respond(404, {'error': 'Not found'})
             self.respond(200, {'ok': True})
-        except (ValueError, OSError) as exc:
+        except (ValueError, OSError, RuntimeError, KeyError, vault.requests.RequestException) as exc:
             self.respond(409, {'error': str(exc)})
 
 

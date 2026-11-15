@@ -31,3 +31,6 @@ models/
 *.bin
 *.pt
 *.pth
+
+# Local reviewed single-model plans
+specific-plans/
