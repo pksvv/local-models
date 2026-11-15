@@ -30,6 +30,22 @@ class Research:
                     except BlockingIOError:alive=True
             except OSError:pass
             if not alive:data['status']='interrupted';data['error']='Previous research was interrupted. Run refresh again.'
+        if data.get('status')=='running':
+            log_path=self.root/'research-agent.log'
+            activity=[]
+            try:
+                with log_path.open('rb') as log:
+                    log.seek(max(data.get('log_offset',0),log_path.stat().st_size-128000))
+                    for line in log.read().decode(errors='replace').splitlines():
+                        try:event=json.loads(line)
+                        except ValueError:continue
+                        item=event.get('item',{})
+                        if item.get('type')=='web_search':
+                            query=item.get('query') or (item.get('action') or {}).get('query')
+                            activity.append(str(query or 'Reading and cross-checking sources')[:180])
+                data['activity']=activity[-5:]
+                data['recent_search_events']=len(activity)
+            except OSError:pass
         return data
 
     @staticmethod
@@ -50,7 +66,7 @@ class Research:
                 self.filelock.close();raise ValueError('Research is already running in another process')
             self.running=True
             old=self.state()
-            vault.atomic(self.path,dict(status='running',query=query,started=time.time(),candidates=old.get('candidates',[]),summary='Researching current releases with Codex CLI live web search…'))
+            vault.atomic(self.path,dict(status='running',stage='search',checked=0,query=query,started=time.time(),log_offset=(self.root/'research-agent.log').stat().st_size if (self.root/'research-agent.log').exists() else 0,candidates=old.get('candidates',[]),summary='Researching current releases with Codex CLI live web search…'))
             threading.Thread(target=self.run,args=(binary,query),daemon=True).start()
 
     def run(self,binary,query=''):
@@ -69,20 +85,23 @@ class Research:
                     result=subprocess.run(args,cwd=tmp,stdout=log,stderr=log,timeout=900)
                 if result.returncode:raise RuntimeError('Codex research failed. Check local research-agent.log and CLI sign-in/usage limits.')
                 response=json.loads(output.read_text())
+            started=vault.read(self.path,{}).get('started',time.time())
             candidates=[];seen=set()
+            total=min(10,len(response.get('candidates',[])))
             for item in response.get('candidates',[])[:10]:
                 if item.get('repo') in seen:continue
                 seen.add(item.get('repo'))
                 source=urlparse(item.get('source',''))
                 if source.scheme!='https' or not source.netloc:continue
                 row={k:str(item.get(k,''))[:2000] for k in FIELDS}
+                vault.atomic(self.path,dict(status='running',stage='validation',query=query,started=started,checked=len(candidates),total=total,current_repo=row['repo'],candidates=candidates,summary='Checking pinned files, sizes and hashes'))
                 try:
                     preview=self.controller.preview_model(row)
                     row.update(plan=preview['plan'],status='validated')
                 except Exception as exc:
                     row.update(status='unavailable',error=str(exc))
                 candidates.append(row)
-            vault.atomic(self.path,dict(status='completed',query=query,finished=time.time(),summary=response.get('summary',''),candidates=candidates))
+            vault.atomic(self.path,dict(status='completed',stage='complete',checked=len(candidates),total=len(candidates),started=started,query=query,finished=time.time(),summary=response.get('summary',''),candidates=candidates))
         except Exception as exc:
             old=vault.read(self.path,{})
             old.update(status='failed',error=str(exc),finished=time.time());vault.atomic(self.path,old)

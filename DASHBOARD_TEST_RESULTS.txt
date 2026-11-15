@@ -65,3 +65,10 @@ Executed actual Codex CLI live-web research; 8 candidates validated against
 Hugging Face metadata. Appended 5 reviewed candidates (~30.47 GiB) without
 starting transfers, preserving all 8 previously completed queue entries.
 Research artifacts, queue history and logs are excluded from Git.
+
+Research display update:
+43 tests passed. Added parsing of actual Codex web-search events. Search uses
+an indeterminate indicator; validation shows actual checked/total candidates.
+Elapsed timer, stage timeline, reduced-motion support and bilingual rotating
+archive notes added. Existing image research completed before the idle server
+was reloaded; no new research or download job was started for visual checks.

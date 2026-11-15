@@ -47,3 +47,11 @@ class ResearchTests(unittest.TestCase):
         self.assertEqual(research.Research.query(''),'')
         for value in [None,[], 'x'*301, 'bad\nquery']:
             with self.assertRaises(ValueError):research.Research.query(value)
+
+    def test_research_activity_reports_real_search_events(self):
+        worker=research.Research(self.root,None);worker.running=True
+        vault.atomic(worker.path,dict(status='running',query='image',started=1,log_offset=0))
+        (self.root/'research-agent.log').write_text('bad line\n'+json.dumps({'item':{'type':'web_search','query':'image model releases'}})+'\n')
+        state=worker.state()
+        self.assertEqual(state['activity'],['image model releases'])
+        self.assertEqual(state['recent_search_events'],1)
