@@ -213,6 +213,12 @@ The runner uses a read-only temporary workspace, live search, a structured JSON 
 
 CLI integration follows the official [non-interactive execution](https://learn.chatgpt.com/docs/non-interactive-mode) and [web search](https://learn.chatgpt.com/docs/web-search) documentation. The installed CLI's help is also checked for supported flags.
 
+## Duplicate and near-match warnings
+
+Single-model previews, multi-link previews and research results display advisory matches against the current queue and downloaded selections known from saved plans/history. **Already downloaded · size match** means the exact repo, revision and selected filenames/sizes are present on disk; the downloader still checks hashes before reuse. **Already queued** identifies an exact selection in the main plan. Neither label implies a new checksum audit.
+
+**Possible match** flags the same repository with another revision/file selection, a shared model family/version (with parameter-size differences called out), or a strongly similar repository name. It shows the existing repo, revision, size, queue/disk state and saved location where present. These are name-based hints, not proof of shared lineage or identical weights. Different publishers, quantizations and tuned/abliterated variants remain selectable; the app never automatically discards a near match. Unknown folders without saved plans and unrecognized naming conventions can be missed.
+
 ## Add exact model links to the main queue
 
 Use **Add models from links** when you already know which repositories you want. This bypasses Codex research:
@@ -368,7 +374,7 @@ The archive is not a benchmark or a promise that every listed model runs on this
 .venv/bin/python -m unittest discover -v
 ```
 
-The latest recorded run passed **47 tests on macOS / Python 3.13**. Tests use temporary files and local HTTP servers, not bulk model transfers. Coverage includes hard process termination and resume, durable-tail handling, complete-partial recovery, HTTP range behavior, checksum/corruption handling, reserve and drive guards, file selection, queue-review checks, request controls, classification, and SQLite persistence/offline recovery.
+The latest recorded run passed **52 tests on macOS / Python 3.13**. Tests use temporary files and local HTTP servers, not bulk model transfers. Coverage includes hard process termination and resume, durable-tail handling, complete-partial recovery, HTTP range behavior, checksum/corruption handling, reserve and drive guards, file selection, queue-review checks, request controls, classification, and SQLite persistence/offline recovery.
 
 English/Hinglish switching, remembered language across navigation, queue filters, the disabled empty-archive Verify control, and the light theme were checked in the live browser. JavaScript syntax checks passed. See [DASHBOARD_TEST_RESULTS.txt](DASHBOARD_TEST_RESULTS.txt).
 

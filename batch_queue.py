@@ -37,7 +37,7 @@ def preview(root,controller,data):
                 fmt='gguf' if any(f['rfilename'].lower().endswith('.gguf') and 'mmproj' not in f['rfilename'].lower() for f in remote['siblings']) else 'native'
             value=controller.preview_model(dict(repo=repo,format=fmt,quant=quant,category='General'))
             with controller.lock:controller.previews.pop(value['preview'],None)
-            rows.append(dict(repo=repo,status='validated',plan=value['plan'],format=fmt))
+            rows.append(dict(repo=repo,status='validated',plan=value['plan'],format=fmt,match_check=value.get('match_check')))
         except (OSError,ValueError,RuntimeError,KeyError,vault.requests.RequestException) as exc:
             rows.append(dict(repo=repo,status='unavailable',error=str(exc)))
     key=secrets.token_urlsafe(24)

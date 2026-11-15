@@ -20,6 +20,7 @@ import jobs
 import library
 import research
 import batch_queue
+import matching
 from queue_store import QueueStore
 
 APP = Path(__file__).resolve().parent
@@ -233,7 +234,7 @@ class Controller:
                 raise ValueError('Too many previews. Wait or restart the dashboard.')
             key = secrets.token_urlsafe(24)
             self.previews[key] = dict(plan=plan, time=now, volume=cfg['volume'], marker=cfg['marker'])
-        return dict(preview=key, plan=plan, free_bytes=free, reserve_gib=cfg['reserve_gib'])
+        return dict(preview=key, plan=plan, free_bytes=free, reserve_gib=cfg['reserve_gib'],match_check=matching.check(APP,cfg,item,self.store))
 
     def start_model(self, key):
         with self.lock:
@@ -304,7 +305,11 @@ class Handler(BaseHTTPRequestHandler):
                 except OSError:pass
             return self.respond(200, data)
         if self.path == '/api/research':
-            return self.respond(200, self.server.research.state())
+            data=self.server.research.state()
+            cfg=vault.read(vault.CONFIG,{})
+            for row in data.get('candidates',[]):
+                if row.get('plan'):row['match_check']=matching.check(APP,cfg,row['plan']['items'][0],self.server.controller.store)
+            return self.respond(200,data)
         if self.path == '/api/library':
             return self.respond(200, self.server.controller.library())
         if self.path == '/api/jobs':
@@ -327,6 +332,7 @@ class Handler(BaseHTTPRequestHandler):
                   '/research.js': ('research.js', 'text/javascript; charset=utf-8'),
                   '/batch.js': ('batch.js', 'text/javascript; charset=utf-8'),
                   '/sections.js': ('sections.js', 'text/javascript; charset=utf-8'),
+                  '/matches.js': ('matches.js', 'text/javascript; charset=utf-8'),
                   '/language.js': ('language.js', 'text/javascript; charset=utf-8'),
                   '/style.css': ('style.css', 'text/css; charset=utf-8')}
         if self.path in assets:

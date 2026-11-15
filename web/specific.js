@@ -27,6 +27,7 @@
     if (!preview) return;
     const box = $('specificResult'); box.replaceChildren(); box.hidden = false;
     const item = preview.plan.items[0];
+    window.renderModelMatches(box,preview.match_check);
     for (const value of [item.repo, tr('revision') + ': ' + item.revision, tr('license') + ': ' + (item.license || tr('card')) + ' · ' + tr('gated') + ': ' + Boolean(item.gated),
       tr('selected') + ': ' + gib(preview.plan.total_bytes) + ' · ' + tr('free') + ': ' + gib(preview.free_bytes) + ' · ' + tr('reserve') + ': ' + preview.reserve_gib + ' GiB']) {
       const p = document.createElement('p'); p.textContent = value; box.append(p);

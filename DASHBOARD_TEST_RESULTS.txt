@@ -85,3 +85,9 @@ JavaScript syntax and diff checks passed. Live browser verified collapse/expand,
 header library deep-link reopening, and remembered batch-section state after
 reload. Existing form nodes, language updates and background polling retained.
 No research, queue or download operations were triggered during visual checks.
+
+Advisory model matching update:
+52 tests passed, including exact queued/downloaded selections, different
+publisher/tuning, parameter-size differences, revision/quantization variants,
+and exclusion of unrelated or absent historical selections. Match warnings
+are advisory and do not change queue, selection or transfer behavior.
