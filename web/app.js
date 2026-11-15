@@ -65,8 +65,8 @@ function buttons() {
   const running = state?.worker.running;
   const available = state?.ready && !state?.cached;
   const hasFiles = state?.items.some(m => m.files.some(f => f.present));
-  $('start').disabled = !available || !$('review').checked || running;
-  $('verify').disabled = !available || !hasFiles || !$('review').checked || running;
+  $('start').disabled = !available || !$('review').checked || running || state?.manager_active;
+  $('verify').disabled = !available || !hasFiles || !$('review').checked || running || state?.manager_active;
   $('verifyReason').textContent = !hasFiles ? t('No downloaded files yet — verification becomes available after files are downloaded.') : t('Verification checks the full queue and reports missing or corrupt files.');
   $('verify').title = !hasFiles ? t('No downloaded files to verify') : t('Verify downloaded files; report missing files');
   $('stop').disabled = !running;
@@ -78,7 +78,7 @@ function renderStatus() {
   $('models').textContent = t('{count} models', {count: state.items.length}); $('size').textContent = bytes(state.total_bytes);
   $('present').textContent = bytes(state.completed_bytes); $('free').textContent = bytes(state.free_bytes);
   $('drive').textContent = (state.volume || t('No drive configured')) + ' · ' + t('{count} GiB reserved', {count: state.reserve_gib});
-  $('worker').textContent = state.worker.running ? t('Running: ') + state.worker.action : state.worker.exit_code == null ? t('Idle') : t('Exited: ') + state.worker.exit_code;
+  $('worker').textContent = state.manager_active && !state.worker.running ? (window.MVLanguage.get() === 'hi' ? 'Doosra download worker active hai' : 'Another manager is active') : state.worker.running ? t('Running: ') + state.worker.action : state.worker.exit_code == null ? t('Idle') : t('Exited: ') + state.worker.exit_code;
   $('catalogCount').textContent = state.catalog.length;
   const catalog = $('catalog'); catalog.replaceChildren();
   for (const row of state.catalog) catalog.append(element('p', row.repo + ' · ' + row.category + ' · ' + (row.enabled ? t('enabled') : t('disabled'))));

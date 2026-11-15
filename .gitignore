@@ -34,3 +34,6 @@ models/
 
 # Local reviewed single-model plans
 specific-plans/
+
+# Private structured job history
+job-logs/

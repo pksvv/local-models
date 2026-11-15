@@ -269,6 +269,16 @@ Only after reviewing the queue:
 
 The dashboard itself does not automatically start a queue after a restart.
 
+## Job activity and queue health
+
+New dashboard jobs receive a unique ID (for example `job-YYYYMMDD-HHMMSS-xxxxxxxx`), a readable name, description, process ID, start/end timestamps, elapsed time, exit code, and lifecycle state. Choose a job in Worker activity and filter INFO, WARN, or ERROR entries. Entries include timestamps, event types, repository/file context where available, and durable checkpoint progress. Timestamps are stored in UTC and displayed in the browser's local time.
+
+Each job has separate JSON metadata and JSONL logs under ignored `job-logs/`; SQLite also retains dashboard launch/exit events. Metadata updates are atomic. The viewer reads up to 30 recent jobs and a bounded tail (up to 200 valid entries / 128 KiB) per job; truncated or incomplete JSONL lines are skipped. A worker that disappears without a final record is shown as interrupted when its process no longer exists. A running state is the last reported state, not proof of network activity; a network read can be waiting for its timeout. Older files are retained rather than deleted automatically.
+
+Main queue health shows expected-size files present, durable partials, files awaiting completion, recorded issues, and whether the shared manager lock is held. Recorded issues may come from an earlier audit; these counts are not a fresh integrity check. Offline counts describe the cached snapshot. Separate single-model jobs have their own activity and are not included in the main queue totals.
+
+Workers already running before this update retain their original output under **Legacy output**. They are not interrupted or assigned invented job IDs. Structured logging begins with the next worker launched from the updated dashboard. A manager running through another dashboard, terminal, or login agent is identified through the shared lock, and conflicting main-queue controls stay disabled.
+
 ## Where files live
 
 | Location | Purpose |
@@ -281,7 +291,8 @@ The dashboard itself does not automatically start a queue after a restart.
 | `ModelVault/.volume-id` | Drive identity marker. Do not delete it or copy it to another disk. |
 | Project `queue.sqlite3` | Local queue snapshots and dashboard worker launch/exit records. |
 | Project `catalog.json` | Model choices and classification labels used for planning and display. |
-| Project `dashboard-manager.log` | Dashboard worker output. |
+| Project `dashboard-manager.log` | Legacy dashboard output; new workers use per-job logs. |
+| Project `job-logs/` | Private job metadata and structured JSONL output. |
 | `~/.config/model-vault/config.json` | Drive settings, reserve, and optional token. |
 | `~/Library/Logs/ModelVault/` | Optional login-agent logs. |
 
@@ -317,7 +328,7 @@ The archive is not a benchmark or a promise that every listed model runs on this
 .venv/bin/python -m unittest discover -v
 ```
 
-The latest recorded run passed **28 tests on macOS / Python 3.13**. Tests use temporary files and local HTTP servers, not bulk model transfers. Coverage includes hard process termination and resume, durable-tail handling, complete-partial recovery, HTTP range behavior, checksum/corruption handling, reserve and drive guards, file selection, queue-review checks, request controls, classification, and SQLite persistence/offline recovery.
+The latest recorded run passed **33 tests on macOS / Python 3.13**. Tests use temporary files and local HTTP servers, not bulk model transfers. Coverage includes hard process termination and resume, durable-tail handling, complete-partial recovery, HTTP range behavior, checksum/corruption handling, reserve and drive guards, file selection, queue-review checks, request controls, classification, and SQLite persistence/offline recovery.
 
 English/Hinglish switching, remembered language across navigation, queue filters, the disabled empty-archive Verify control, and the light theme were checked in the live browser. JavaScript syntax checks passed. See [DASHBOARD_TEST_RESULTS.txt](DASHBOARD_TEST_RESULTS.txt).
 

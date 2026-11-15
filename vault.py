@@ -5,6 +5,7 @@ import subprocess, sys, time, uuid
 from pathlib import Path
 from urllib.parse import quote
 import requests
+import job_log
 
 APP = Path(__file__).resolve().parent
 CONFIG = Path.home()/'.config/model-vault/config.json'
@@ -190,6 +191,7 @@ def download(url, dest, item, check=lambda:None, reserve=20*GIB, headers=None):
                     f.write(b)
                     if f.tell()-last>=CHECKPOINT_BYTES or time.monotonic()-last_time>=CHECKPOINT_SECONDS:
                         checkpoint();last=f.tell();last_time=time.monotonic()
+                        job_log.emit('progress', 'Durable checkpoint saved', file=dest.name, durable_bytes=last, total_bytes=item['size'])
                         print(f'{dest.name}: {last/item["size"]:.1%} durable',flush=True)
             finally:
                 checkpoint()
@@ -214,6 +216,7 @@ def run(cfg, verify_only=False, plan_path='plan.json'):
         base=Path('models')/m['repo']/m['revision']
         for f in m['files']:
             guard(cfg);dest=base/safe(f['name']);key=str(dest)
+            job_log.emit('file_started', 'Verifying file' if verify_only else 'Checking / downloading file', repo=m['repo'], file=f['name'], total_bytes=f['size'])
             # Recheck hash after each restart. Slow on HDD, but detects cut-related corruption.
             try:
                 if verify_only:
@@ -223,9 +226,11 @@ def run(cfg, verify_only=False, plan_path='plan.json'):
                     url='https://huggingface.co/'+m['repo']+'/resolve/'+m['revision']+'/'+quote(f['name'],safe='/')
                     result=download(url,dest,f,lambda:guard(cfg),cfg['reserve_gib']*GIB,{'Authorization':'Bearer '+token()} if token() else {})
                 state[key]={'status':result,'time':time.time(),'bytes':f['size']}
+                job_log.emit('file_result', result, 'INFO' if result!='missing or corrupt' else 'WARN', repo=m['repo'], file=f['name'], status=result, total_bytes=f['size'])
                 print(result,key,flush=True)
             except (requests.RequestException,OSError,RuntimeError,ValueError) as e:
                 errors+=1;state[key]={'status':'retry required','error':str(e),'time':time.time()}
+                job_log.emit('file_result', str(e), 'ERROR', repo=m['repo'], file=f['name'], status='retry required')
                 print('RETRY REQUIRED',key,str(e),flush=True)
             guard(cfg);atomic('status.json',state)
     return errors
@@ -312,6 +317,15 @@ def main():
             print('Queue complete. All files verified; no repeated transfers this boot.')
 
 if __name__=='__main__':
-    try:main()
-    except KeyboardInterrupt:print('\nStopped. Durable checkpoints retained.');sys.exit(130)
-    except Exception as e:print(type(e).__name__+': '+str(e),file=sys.stderr);sys.exit(1)
+    sys.stdout=job_log.StructuredOutput(sys.stdout)
+    sys.stderr=job_log.StructuredOutput(sys.stderr, 'ERROR')
+    job_log.emit('job_started', 'CLI worker started', command=sys.argv[1] if len(sys.argv)>1 else 'help')
+    try:
+        main()
+        job_log.emit('job_finished', 'Job completed successfully', status='completed')
+    except KeyboardInterrupt:
+        job_log.emit('job_finished', 'Stopped; durable checkpoints retained', 'WARN', status='stopped')
+        sys.exit(130)
+    except Exception as e:
+        job_log.emit('job_finished', type(e).__name__+': '+str(e), 'ERROR', status='failed')
+        sys.exit(1)

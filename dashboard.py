@@ -16,6 +16,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import vault
+import jobs
 from queue_store import QueueStore
 
 APP = Path(__file__).resolve().parent
@@ -141,14 +142,32 @@ class Controller:
             if action == 'verify' and not any(f['present'] for m in current['items'] for f in m['files']):
                 raise ValueError('No downloaded files to verify. Download files first.')
             # The CLI retains exclusive manager locking, volume guards, and cwd on disk.
-            with self.log.open('ab') as log:
-                self.process = subprocess.Popen(
-                    [sys.executable, '-u', str(APP / 'vault.py'), action,
-                     '--expected-plan', signature], cwd=APP, stdout=log, stderr=log,
-                    start_new_session=True)
+            self._launch([sys.executable, '-u', str(APP / 'vault.py'), action,
+                          '--expected-plan', signature], action, signature)
             self.action = action
             if self.store:
                 self.event_id = self.store.event(action, signature, self.process.pid, 'started')
+
+    def _launch(self, arguments, action, signature):
+        metadata = None
+        if self.store:
+            metadata, self.log = jobs.create(APP, action, signature)
+        try:
+            with self.log.open('ab') as log:
+                options = dict(cwd=APP, stdout=log, stderr=log, start_new_session=True)
+                if metadata:
+                    options['env'] = {**os.environ, 'MODEL_VAULT_JOB_ID': metadata['id']}
+                self.process = subprocess.Popen(arguments, **options)
+        except OSError:
+            if metadata: jobs.update(APP, metadata, status='failed', ended=time.time())
+            raise
+        if metadata:
+            jobs.update(APP, metadata, status='running', pid=self.process.pid)
+            process = self.process
+            def monitor():
+                code = process.wait()
+                jobs.update(APP, metadata, status='completed' if code==0 else 'stopped' if code in (130,-2) else 'failed', ended=time.time(), exit_code=code)
+            threading.Thread(target=monitor, daemon=True).start()
 
     def preview_model(self, data):
         value = str(data.get('repo', '')).strip()
@@ -208,10 +227,9 @@ class Controller:
             path = APP / 'specific-plans' / (key + '.json')
             vault.atomic(path, preview['plan'])
             signature = hashlib.sha256(path.read_bytes()).hexdigest()
-            with self.log.open('ab') as log:
-                self.process = subprocess.Popen([sys.executable, '-u', str(APP / 'vault.py'),
-                    'start', '--plan-file', str(path), '--expected-plan', signature],
-                    cwd=APP, stdout=log, stderr=log, start_new_session=True)
+            self._launch([sys.executable, '-u', str(APP / 'vault.py'), 'start',
+                          '--plan-file', str(path), '--expected-plan', signature],
+                         'specific: ' + preview['plan']['items'][0]['repo'], signature)
             self.action = 'specific: ' + preview['plan']['items'][0]['repo']
             if self.store:
                 self.event_id = self.store.event(self.action, signature, self.process.pid, 'started')
@@ -246,9 +264,26 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == '/api/status':
             data = self.server.controller.snapshot()
             data.update(worker=self.server.controller.state(), csrf=self.server.csrf)
+            files=[f for m in data['items'] for f in m['files']]
+            data['health']=dict(models=len(data['items']), files=len(files),
+                present=sum(f['present'] for f in files), partial=sum(bool(f['durable_bytes']) and not f['present'] for f in files),
+                attention=sum(bool(f.get('error')) or f['status'] in ('retry required','missing or corrupt','missing') for f in files),
+                queued=sum(not f['present'] and not f['durable_bytes'] for f in files),
+                stale=bool(data.get('cached')))
+            # Inspect the shared manager lock without creating/writing any drive files.
+            data['manager_active']=False
+            if data.get('ready'):
+                lock_path=Path(data['volume'])/'ModelVault'/'.manager.lock'
+                try:
+                    with lock_path.open('r') as lock:
+                        try:vault.fcntl.flock(lock,vault.fcntl.LOCK_EX|vault.fcntl.LOCK_NB)
+                        except BlockingIOError:data['manager_active']=True
+                except OSError:pass
             return self.respond(200, data)
+        if self.path == '/api/jobs':
+            return self.respond(200, {'jobs':jobs.history(APP)})
         if self.path == '/api/log':
-            p = self.server.controller.log
+            p = APP / 'dashboard-manager.log'
             if p.exists():
                 with p.open('rb') as f:
                     f.seek(max(0, p.stat().st_size - 16000))
@@ -260,6 +295,7 @@ class Handler(BaseHTTPRequestHandler):
                   '/help': ('help.html', 'text/html; charset=utf-8'),
                   '/app.js': ('app.js', 'text/javascript; charset=utf-8'),
                   '/specific.js': ('specific.js', 'text/javascript; charset=utf-8'),
+                  '/activity.js': ('activity.js', 'text/javascript; charset=utf-8'),
                   '/language.js': ('language.js', 'text/javascript; charset=utf-8'),
                   '/style.css': ('style.css', 'text/css; charset=utf-8')}
         if self.path in assets:

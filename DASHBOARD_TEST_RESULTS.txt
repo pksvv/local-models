@@ -43,3 +43,11 @@ Live Hugging Face metadata preview returned pinned revision, selected GGUF,
 license and exact files; no new transfer was started for validation.
 Updated UI is on port 8767 because the user has an active worker on 8766;
 the existing worker was not stopped or restarted.
+
+Structured job activity update:
+33 tests passed, including JSONL identity/timestamp/severity, persisted metadata,
+partial log handling, interrupted-worker detection, and harmless subprocess
+lifecycle completion. Live queue health and shared-manager detection verified
+on 8767. Existing active worker on 8766 was preserved, with legacy output
+explicitly identified. New structured jobs were tested in temporary storage;
+no additional model download was started for testing.
