@@ -18,6 +18,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import vault
 import jobs
 import library
+import research
 from queue_store import QueueStore
 
 APP = Path(__file__).resolve().parent
@@ -301,6 +302,8 @@ class Handler(BaseHTTPRequestHandler):
                         except BlockingIOError:data['manager_active']=True
                 except OSError:pass
             return self.respond(200, data)
+        if self.path == '/api/research':
+            return self.respond(200, self.server.research.state())
         if self.path == '/api/library':
             return self.respond(200, self.server.controller.library())
         if self.path == '/api/jobs':
@@ -320,6 +323,7 @@ class Handler(BaseHTTPRequestHandler):
                   '/specific.js': ('specific.js', 'text/javascript; charset=utf-8'),
                   '/activity.js': ('activity.js', 'text/javascript; charset=utf-8'),
                   '/library.js': ('library.js', 'text/javascript; charset=utf-8'),
+                  '/research.js': ('research.js', 'text/javascript; charset=utf-8'),
                   '/language.js': ('language.js', 'text/javascript; charset=utf-8'),
                   '/style.css': ('style.css', 'text/css; charset=utf-8')}
         if self.path in assets:
@@ -338,6 +342,12 @@ class Handler(BaseHTTPRequestHandler):
             if not 0 < size <= 4096:
                 raise ValueError('Invalid body length')
             data = json.loads(self.rfile.read(size))
+            if self.path == '/api/research/start':
+                self.server.research.start()
+                return self.respond(200, {'ok':True})
+            if self.path == '/api/research/enqueue':
+                if data.get('reviewed') is not True:raise ValueError('Review candidate files and license first')
+                return self.respond(200,self.server.research.enqueue(data.get('indices'),data.get('signature'),data.get('budget_gib')))
             if self.path == '/api/model/preview':
                 return self.respond(200, self.server.controller.preview_model(data))
             if self.path == '/api/model/start':
@@ -363,6 +373,7 @@ def main():
     args = parser.parse_args()
     server = ThreadingHTTPServer(('127.0.0.1', args.port), Handler)
     server.controller = Controller(QueueStore(APP / 'queue.sqlite3'))
+    server.research = research.Research(APP,server.controller)
     server.csrf = secrets.token_urlsafe(32)
     print(f'Model Vault 2.0: http://127.0.0.1:{server.server_port} (downloads idle)', flush=True)
     try:

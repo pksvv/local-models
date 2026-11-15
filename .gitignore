@@ -37,3 +37,8 @@ specific-plans/
 
 # Private structured job history
 job-logs/
+
+# Local research and queue history
+research-state.json
+.research.lock
+queue-history/

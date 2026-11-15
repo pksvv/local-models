@@ -34,6 +34,7 @@ def inventory(cfg, plans, cached=False):
                     models.append(dict(id=hashlib.sha256(repr(key).encode()).hexdigest()[:16],
                         repo=model['repo'],revision=model['revision'],category=model.get('category','Uncategorized'),
                         size=sum(f['size'] for f in files),files=len(files),location=str(base),
+                        model_paths=[str(base/vault.safe(f['name'])) for f in files if f['name'].lower().endswith(('.gguf','.safetensors','.bin','.pt'))],
                         verification='Previously verified' if verified else 'Verification pending',
                         last_checked=max(dates) if dates else None))
         return dict(available=True,models=models,error=None)

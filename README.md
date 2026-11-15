@@ -197,6 +197,18 @@ Generate a fresh plan:
 
 Planning fetches metadata, selects files, and pins exact commits; it does not download model weights. Errors preserve the previous plan. Review the resulting `/Volumes/ModelArchive/ModelVault/plan.json` and the dashboard before starting.
 
+## Research releases and refresh the queue
+
+Use **Research & refresh queue** to run a local, signed-in Codex CLI agent with live web search. It researches primary release/model-card sources and proposes up to ten candidates with a reason, source URL, category, format and publication date where verified. Unknown dates stay unknown. Candidate files, checksums, sizes and exact commits are then validated through the Hugging Face API. This is a shortlist, not exhaustive market coverage or an inference benchmark.
+
+Review the candidate files and licenses, select a batch, set a new-batch budget (default 100 GiB), and tick the review checkbox. **Add selected to queue** appends pinned entries, preserving existing models and the previous plan. It does not launch downloads. Review the updated full queue before Start / Resume. Updates refuse stale plans, active manager locks, installed automatic login agents, selections over budget, and insufficient current free space. Remove the login agent before queue changes so it cannot silently start the refreshed plan. Already-downloaded files remain reusable.
+
+A 5 TB+ archive can be built in stages as storage becomes available; that target does not override actual free space or the reserve. Large candidates can be kept in the review list for later instead of being downloaded immediately. Research uses your Codex account's allowance and requires CLI authentication. No recurring research schedule is installed.
+
+The runner uses a read-only temporary workspace, live search, a structured JSON response, disabled shell/app/computer/browser-control features, and a 15-minute process timeout. It does not send local model paths, tokens or drive configuration in the research prompt. Candidate metadata, CLI output and prior queue snapshots stay in ignored `research-state.json`, `research-agent.log` and `queue-history/`. Interrupted/failed research is shown explicitly; it never silently substitutes an old shortlist as fresh research.
+
+CLI integration follows the official [non-interactive execution](https://learn.chatgpt.com/docs/non-interactive-mode) and [web search](https://learn.chatgpt.com/docs/web-search) documentation. The installed CLI's help is also checked for supported flags.
+
 ## Download a specific model from the dashboard
 
 Use **Download a specific model** above the queue:
@@ -334,7 +346,7 @@ The archive is not a benchmark or a promise that every listed model runs on this
 .venv/bin/python -m unittest discover -v
 ```
 
-The latest recorded run passed **37 tests on macOS / Python 3.13**. Tests use temporary files and local HTTP servers, not bulk model transfers. Coverage includes hard process termination and resume, durable-tail handling, complete-partial recovery, HTTP range behavior, checksum/corruption handling, reserve and drive guards, file selection, queue-review checks, request controls, classification, and SQLite persistence/offline recovery.
+The latest recorded run passed **41 tests on macOS / Python 3.13**. Tests use temporary files and local HTTP servers, not bulk model transfers. Coverage includes hard process termination and resume, durable-tail handling, complete-partial recovery, HTTP range behavior, checksum/corruption handling, reserve and drive guards, file selection, queue-review checks, request controls, classification, and SQLite persistence/offline recovery.
 
 English/Hinglish switching, remembered language across navigation, queue filters, the disabled empty-archive Verify control, and the light theme were checked in the live browser. JavaScript syntax checks passed. See [DASHBOARD_TEST_RESULTS.txt](DASHBOARD_TEST_RESULTS.txt).
 

@@ -29,7 +29,8 @@
       card.append(el('p',m.verification==='Previously verified'?tr('✓ Previously checksum-verified','✓ Pehle checksum-verified'):tr('Verification pending','Verification pending'),'verification-label'));
       card.append(el('p',tr('Revision: ','Version: ')+m.revision,'hint'));
       if(m.last_checked) card.append(el('p',tr('Last recorded file check: ','Last recorded file check: ')+new Date(m.last_checked*1000).toLocaleString(),'hint'));
-      const location=el('details','');location.append(el('summary',tr('Saved location','Saved location')),el('code',m.location));card.append(location);
+      const location=el('div','', 'local-location');location.append(el('strong',tr('Local folder','Local folder')),el('code',m.location));
+      for(const path of m.model_paths||[]) location.append(el('code',path));card.append(location);
       target.append(card);
     }
     if(!shown.length) target.append(el('p',library.models.length?tr('No matching downloaded models.','Matching downloaded models nahi mile.'):tr('No complete models found yet. Completed downloads will appear here automatically.','Abhi complete model nahi mila. Download complete hote hi yahan dikhega.'),'hint'));

@@ -57,3 +57,11 @@ Downloaded library update:
 missing/partial/wrong-sized files, historical verification labels and unsafe or
 offline paths. Live library found the 8 completed pinned models; all had prior
 successful file-check records. No transfers were started or stopped by this update.
+
+Codex research and queue refresh update:
+41 tests passed. Added append preservation/history, stale queue and budget
+rejection, invalid/unvalidated candidate refusal and login-agent guard coverage.
+Executed actual Codex CLI live-web research; 8 candidates validated against
+Hugging Face metadata. Appended 5 reviewed candidates (~30.47 GiB) without
+starting transfers, preserving all 8 previously completed queue entries.
+Research artifacts, queue history and logs are excluded from Git.
