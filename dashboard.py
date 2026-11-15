@@ -326,6 +326,7 @@ class Handler(BaseHTTPRequestHandler):
                   '/library.js': ('library.js', 'text/javascript; charset=utf-8'),
                   '/research.js': ('research.js', 'text/javascript; charset=utf-8'),
                   '/batch.js': ('batch.js', 'text/javascript; charset=utf-8'),
+                  '/sections.js': ('sections.js', 'text/javascript; charset=utf-8'),
                   '/language.js': ('language.js', 'text/javascript; charset=utf-8'),
                   '/style.css': ('style.css', 'text/css; charset=utf-8')}
         if self.path in assets:

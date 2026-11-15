@@ -79,3 +79,9 @@ source rejection, Auto native selection, partial preview failures, persisted
 batch previews, category selection and existing-queue preservation.
 Live metadata-only UI preview exercised the user's five supplied repositories.
 No transfers or main-queue modifications were performed for UI testing.
+
+Collapsible dashboard / typography update:
+JavaScript syntax and diff checks passed. Live browser verified collapse/expand,
+header library deep-link reopening, and remembered batch-section state after
+reload. Existing form nodes, language updates and background polling retained.
+No research, queue or download operations were triggered during visual checks.

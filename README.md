@@ -297,6 +297,10 @@ Only after reviewing the queue:
 
 The dashboard itself does not automatically start a queue after a restart.
 
+## Collapsible dashboard sections
+
+The library, research, direct-link queue form, single-model form, segmentation, queue and activity panels have keyboard-accessible disclosure headers. Click a header (or use Enter/Space) to expand/collapse it. Each section remembers its open/closed state in this browser. Following a section link opens its target even if it was collapsed; background status polling continues without resetting panels or form state. The light turmeric/red design uses a local Avenir-style font stack, so no external font service is contacted.
+
 ## Downloaded-model library
 
 The download queue hides completed models by default; use **Show completed models in queue** to include them. This is a display filter: the pinned plan is preserved, and existing files are checked/reused rather than removed.
