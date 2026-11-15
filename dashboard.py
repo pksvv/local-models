@@ -343,7 +343,7 @@ class Handler(BaseHTTPRequestHandler):
                 raise ValueError('Invalid body length')
             data = json.loads(self.rfile.read(size))
             if self.path == '/api/research/start':
-                self.server.research.start()
+                self.server.research.start(data.get('query',''))
                 return self.respond(200, {'ok':True})
             if self.path == '/api/research/enqueue':
                 if data.get('reviewed') is not True:raise ValueError('Review candidate files and license first')

@@ -199,6 +199,8 @@ Planning fetches metadata, selects files, and pins exact commits; it does not do
 
 ## Research releases and refresh the queue
 
+Enter an optional research phrase or model name, such as `uncensored`, `abliterated coding models`, or `Qwen`, to focus discovery. Leave it blank for broad research. The completed report records the actual query, so changing the input does not relabel old results.
+
 Use **Research & refresh queue** to run a local, signed-in Codex CLI agent with live web search. It researches primary release/model-card sources and proposes up to ten candidates with a reason, source URL, category, format and publication date where verified. Unknown dates stay unknown. Candidate files, checksums, sizes and exact commits are then validated through the Hugging Face API. This is a shortlist, not exhaustive market coverage or an inference benchmark.
 
 Review the candidate files and licenses, select a batch, set a new-batch budget (default 100 GiB), and tick the review checkbox. **Add selected to queue** appends pinned entries, preserving existing models and the previous plan. It does not launch downloads. Review the updated full queue before Start / Resume. Updates refuse stale plans, active manager locks, installed automatic login agents, selections over budget, and insufficient current free space. Remove the login agent before queue changes so it cannot silently start the refreshed plan. Already-downloaded files remain reusable.
@@ -346,7 +348,7 @@ The archive is not a benchmark or a promise that every listed model runs on this
 .venv/bin/python -m unittest discover -v
 ```
 
-The latest recorded run passed **41 tests on macOS / Python 3.13**. Tests use temporary files and local HTTP servers, not bulk model transfers. Coverage includes hard process termination and resume, durable-tail handling, complete-partial recovery, HTTP range behavior, checksum/corruption handling, reserve and drive guards, file selection, queue-review checks, request controls, classification, and SQLite persistence/offline recovery.
+The latest recorded run passed **42 tests on macOS / Python 3.13**. Tests use temporary files and local HTTP servers, not bulk model transfers. Coverage includes hard process termination and resume, durable-tail handling, complete-partial recovery, HTTP range behavior, checksum/corruption handling, reserve and drive guards, file selection, queue-review checks, request controls, classification, and SQLite persistence/offline recovery.
 
 English/Hinglish switching, remembered language across navigation, queue filters, the disabled empty-archive Verify control, and the light theme were checked in the live browser. JavaScript syntax checks passed. See [DASHBOARD_TEST_RESULTS.txt](DASHBOARD_TEST_RESULTS.txt).
 

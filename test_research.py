@@ -41,3 +41,9 @@ class ResearchTests(unittest.TestCase):
         worker=self.fixture();agent=self.root/'Library/LaunchAgents/com.vipul.model-vault.plist';agent.parent.mkdir(parents=True);agent.write_text('test')
         with patch.object(Path,'home',return_value=self.root):
             with self.assertRaisesRegex(ValueError,'login agent'):worker.enqueue([0],'',100)
+
+    def test_phrase_validation(self):
+        self.assertEqual(research.Research.query('  abliterated Qwen coding  '),'abliterated Qwen coding')
+        self.assertEqual(research.Research.query(''),'')
+        for value in [None,[], 'x'*301, 'bad\nquery']:
+            with self.assertRaises(ValueError):research.Research.query(value)
