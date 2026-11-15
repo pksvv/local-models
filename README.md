@@ -1,5 +1,7 @@
 # Model Vault 2.0
 
+**Created by Vipul** · [GitHub](https://github.com/pksvv)
+
 **Save the models. Keep the context. Build your own AI library.**
 
 Model Vault is a local-first archive for selected Hugging Face model releases. It combines a reviewable download queue, checksum verification, durable checkpoints, and a web dashboard, with model data stored on an external drive.
