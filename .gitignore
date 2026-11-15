@@ -42,3 +42,6 @@ job-logs/
 research-state.json
 .research.lock
 queue-history/
+
+# Private direct-link previews
+batch-previews/

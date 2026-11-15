@@ -19,6 +19,7 @@ import vault
 import jobs
 import library
 import research
+import batch_queue
 from queue_store import QueueStore
 
 APP = Path(__file__).resolve().parent
@@ -324,6 +325,7 @@ class Handler(BaseHTTPRequestHandler):
                   '/activity.js': ('activity.js', 'text/javascript; charset=utf-8'),
                   '/library.js': ('library.js', 'text/javascript; charset=utf-8'),
                   '/research.js': ('research.js', 'text/javascript; charset=utf-8'),
+                  '/batch.js': ('batch.js', 'text/javascript; charset=utf-8'),
                   '/language.js': ('language.js', 'text/javascript; charset=utf-8'),
                   '/style.css': ('style.css', 'text/css; charset=utf-8')}
         if self.path in assets:
@@ -342,6 +344,11 @@ class Handler(BaseHTTPRequestHandler):
             if not 0 < size <= 4096:
                 raise ValueError('Invalid body length')
             data = json.loads(self.rfile.read(size))
+            if self.path == '/api/batch/preview':
+                return self.respond(200,batch_queue.preview(APP,self.server.controller,data))
+            if self.path == '/api/batch/enqueue':
+                if data.get('reviewed') is not True:raise ValueError('Review the selected models and files first')
+                return self.respond(200,batch_queue.enqueue(APP,data))
             if self.path == '/api/research/start':
                 self.server.research.start(data.get('query',''))
                 return self.respond(200, {'ok':True})

@@ -72,3 +72,10 @@ an indeterminate indicator; validation shows actual checked/total candidates.
 Elapsed timer, stage timeline, reduced-motion support and bilingual rotating
 archive notes added. Existing image research completed before the idle server
 was reloaded; no new research or download job was started for visual checks.
+
+Multi-link queue UI update:
+47 tests passed: tracking-URL normalization and duplicate removal, invalid
+source rejection, Auto native selection, partial preview failures, persisted
+batch previews, category selection and existing-queue preservation.
+Live metadata-only UI preview exercised the user's five supplied repositories.
+No transfers or main-queue modifications were performed for UI testing.

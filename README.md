@@ -213,6 +213,18 @@ The runner uses a read-only temporary workspace, live search, a structured JSON 
 
 CLI integration follows the official [non-interactive execution](https://learn.chatgpt.com/docs/non-interactive-mode) and [web search](https://learn.chatgpt.com/docs/web-search) documentation. The installed CLI's help is also checked for supported flags.
 
+## Add exact model links to the main queue
+
+Use **Add models from links** when you already know which repositories you want. This bypasses Codex research:
+
+1. Paste up to 10 repository URLs or `owner/repo` identifiers, one per line. Tracking query strings are removed and duplicate repositories are collapsed.
+2. Choose Auto/GGUF/native and a GGUF quantization. Auto selects GGUF when weight GGUFs exist in that repo, otherwise native safetensors. It does not silently choose another quantization or substitute another repository.
+3. Click **Preview links** to fetch metadata only. Each repo shows its selected format, total size, license, gated status, exact files and pinned commit; failures are shown per repo so valid entries remain selectable.
+4. Select the models to add and choose their category labels. Category defaults to General and is your editable label, not an inferred quality/behavior guarantee.
+5. Review all selected files, formats, licenses and sizes, set a new-batch GiB budget, tick the review checkbox, then **Add selected to queue**.
+
+Adding appends to the main plan with its existing manager-lock, stale-plan, free-space/reserve and login-agent checks. It never starts a worker. Active downloads must be stopped before changing the queue; previews can be inspected without stopping them. Existing downloads and pinned entries are retained. Local preview data stays under ignored `batch-previews/`. Select and review the updated queue separately before starting transfers. In Auto mode, a native repo can be much larger than a quantized GGUF—always check the preview sizes.
+
 ## Download a specific model from the dashboard
 
 Use **Download a specific model** above the queue:
@@ -352,7 +364,7 @@ The archive is not a benchmark or a promise that every listed model runs on this
 .venv/bin/python -m unittest discover -v
 ```
 
-The latest recorded run passed **43 tests on macOS / Python 3.13**. Tests use temporary files and local HTTP servers, not bulk model transfers. Coverage includes hard process termination and resume, durable-tail handling, complete-partial recovery, HTTP range behavior, checksum/corruption handling, reserve and drive guards, file selection, queue-review checks, request controls, classification, and SQLite persistence/offline recovery.
+The latest recorded run passed **47 tests on macOS / Python 3.13**. Tests use temporary files and local HTTP servers, not bulk model transfers. Coverage includes hard process termination and resume, durable-tail handling, complete-partial recovery, HTTP range behavior, checksum/corruption handling, reserve and drive guards, file selection, queue-review checks, request controls, classification, and SQLite persistence/offline recovery.
 
 English/Hinglish switching, remembered language across navigation, queue filters, the disabled empty-archive Verify control, and the light theme were checked in the live browser. JavaScript syntax checks passed. See [DASHBOARD_TEST_RESULTS.txt](DASHBOARD_TEST_RESULTS.txt).
 
