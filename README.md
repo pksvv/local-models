@@ -287,6 +287,8 @@ The dashboard itself does not automatically start a queue after a restart.
 
 ## Downloaded-model library
 
+The download queue hides completed models by default; use **Show completed models in queue** to include them. This is a display filter: the pinned plan is preserved, and existing files are checked/reused rather than removed.
+
 The dashboard now has a separate **Downloaded models** section above the specific-model form. Completion cards show completed, partial and not-started models in the main queue, plus the total complete selections in your library. Search the library by repository or category. Each entry shows a completion badge, size, selected-file count, pinned revision, saved directory and the latest recorded file-check time.
 
 The library checks known plans from the main queue, saved single-model plans and previous SQLite snapshots for the configured drive. Duplicate selections are collapsed. Every selected file must exist at its expected size; a `.part` file alone does not qualify. **Previously checksum-verified** means successful results were recorded previously; inventory polling checks sizes and does not re-hash model weights. Otherwise the entry says Verification pending. Unknown folders without a saved plan are not automatically indexed. When the drive is unavailable the library does not claim live completion.

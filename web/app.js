@@ -30,9 +30,13 @@ function renderQueue() {
   const opened = new Set([...target.querySelectorAll('details[open]')].map(e => e.dataset.repo));
   target.replaceChildren();
   const query = $('search').value.toLowerCase();
-  const shown = state.items.filter(m => (m.repo + ' ' + m.category + ' ' + m.tags.join(' ')).toLowerCase().includes(query)
+  const complete = m => m.files.length > 0 && m.files.every(f => f.present);
+  const includeCompleted = $('showCompleted').checked;
+  $('showCompletedLabel').textContent = window.MVLanguage.get() === 'hi' ? 'Queue mein completed models bhi dikhao' : 'Show completed models in queue';
+  const shown = state.items.filter(m => (includeCompleted || !complete(m)) && (m.repo + ' ' + m.category + ' ' + m.tags.join(' ')).toLowerCase().includes(query)
       && Object.entries(filters).every(([key, value]) => values(m, key).includes(value)));
-  $('queueCount').textContent = t('Showing {shown} of {total} models', {shown: shown.length, total: state.items.length});
+  const hiddenCompleted = includeCompleted ? 0 : state.items.filter(complete).length;
+  $('queueCount').textContent = t('Showing {shown} of {total} models', {shown: shown.length, total: state.items.length}) + (hiddenCompleted ? (window.MVLanguage.get() === 'hi' ? ' · ' + hiddenCompleted + ' completed library mein hain' : ' · ' + hiddenCompleted + ' completed models in library') : '');
   $('filterSummary').textContent = Object.entries(filters).map(([key, value]) => t(dimensions.find(d => d[0] === key)[1]) + ': ' + t(value)).join(' · ') || t('All segments');
   for (const model of shown) {
     const card = element('article', '', 'model-card');
@@ -59,7 +63,7 @@ function renderQueue() {
     }
     card.append(detail); target.append(card);
   }
-  if (!target.children.length) target.append(element('p', 'No models match. Clear filters to see the full queue.'));
+  if (!target.children.length) target.append(element('p', (!includeCompleted && state.items.every(complete) ? (window.MVLanguage.get() === 'hi' ? 'Queue complete hai. Saare downloaded models library mein dekho.' : 'Queue complete. All downloaded models are in your library.') : 'No models match. Clear filters to see the full queue.')));
 }
 function buttons() {
   const running = state?.worker.running;
@@ -104,6 +108,7 @@ async function action(name) {
   } catch (error) { $('notice').textContent = error.message; buttons(); }
 }
 $('clearFilters').addEventListener('click', () => { for (const k of Object.keys(filters)) delete filters[k]; $('search').value = ''; renderSegments(); renderQueue(); });
+$('showCompleted').addEventListener('change', renderQueue);
 $('review').addEventListener('change', buttons); $('search').addEventListener('input', renderQueue);
 for (const id of ['start', 'verify', 'stop']) $(id).addEventListener('click', () => action(id));
 refresh(); setInterval(refresh, 4000);
